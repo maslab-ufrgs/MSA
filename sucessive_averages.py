@@ -1,3 +1,4 @@
+#!/usr/bin/python2.7
 '''
 Created on 09/01/2015
 
@@ -17,20 +18,20 @@ class Node(object):
 class Edge(object):
     def __init__(self, u, v, capacity, free_flow, alpha, beta):
         self.name = "%s-%s" % (u,v)
-        
+
         self.start = u
         self.end = v
-        
+
         self.capacity = capacity
         self.free_flow = free_flow
         self.alpha = alpha
         self.beta = beta
-        
+
         self.flow = 0
         self.aux_flow = 0
-                
+
         self.update_cost()
-        
+
     # BPR value-delay function (VDF)
     def update_cost(self):
         self.cost = self.free_flow * (1 + self.beta * ((self.flow / self.capacity) ** self.alpha))
@@ -45,7 +46,7 @@ def generateGraph(graph_file):
     line = line[:-1]
     while line:
         taglist = string.split(line)
-        
+
         u = taglist[0]
         if u not in N_names:
             N.append(Node(u))
@@ -54,9 +55,9 @@ def generateGraph(graph_file):
         if v not in N_names:
             N.append(Node(v))
             N_names.append(v)
-        
+
         E.append(Edge(u, v, float(taglist[2]), float(taglist[3]), float(taglist[4]), float(taglist[5])))
-        
+
         line = fname.readline()
         line = line[:-1]
     fname.close()
@@ -380,7 +381,7 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
     print "Deviations: %i"%(sum_deviations)
     #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
     print "AEC: %.10f"%(delta_top / delta_bottom)
-    
+
 if __name__ == '__main__':
     
     net = "Sioux_Falls"
