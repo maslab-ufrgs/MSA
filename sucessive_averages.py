@@ -4,23 +4,49 @@ Created on 09/01/2015
 
 @author: gabriel
 '''
+
+'''
+TODO:
+    Solve the function problem.
+    Use argv for parameters.
+'''
+
+#Python third-party modules
 import string
+from py_expression_eval import Parser
 
-# represents a node in the graph
 class Node(object):
+    """
+    Represents a node in the graph.
+    """
     def __init__(self, name):
-        self.name = name     # name of the node
-        self.dist = 1000000  # distance to this node from start node
-        self.prev = None     # previous node to this node
-        self.flag = 0        # access flag
+        """
+        In:
+            name:String = Name of the node.
+        """
+        self.name = name	# name of the node
+        self.dist = 1000000	# distance to this node from start node
+        self.prev = None	# previous node to this node
+        self.flag = 0		# access flag
 
-# represents an edge in the graph
+    def __repr__(self):
+        return repr(self.name)
+
+    def __eq__(self, other):
+        """
+        Equality based on equality of attributes.
+        """
+        return self.__dict__ == other.__dict__
+
 class Edge(object):
-    def __init__(self, u, v, capacity, free_flow, alpha, beta):
-        self.name = "%s-%s" % (u,v)
+    '''
+    Represents an edge in the graph.
+    '''
+    def __init__(self, start, end, capacity, free_flow, alpha, beta):
+        self.name = "%s-%s" % (start,end)
 
-        self.start = u
-        self.end = v
+        self.start = start
+        self.end = end
 
         self.capacity = capacity
         self.free_flow = free_flow
@@ -32,15 +58,94 @@ class Edge(object):
 
         self.update_cost()
 
-    # BPR value-delay function (VDF)
     def update_cost(self):
+        '''
+        BPR value-delay function (VDF).
+        '''
         self.cost = self.free_flow * (1 + self.beta * ((self.flow / self.capacity) ** self.alpha))
+
+def generateGraph(graph_file, flow=0.0):
+    """
+    Generates the graph from a text file following the specifications(available @
+        http://wiki.inf.ufrgs.br/network_files_specification).
+    In:
+        graph_file:String = Path to the network(graph) file.
+        flow:Float = Value to sum the cost of the edges.
+
+    Out:
+        V:List = List of vertices or nodes of the graph.
+        E:List = List of the edges of the graph.
+        OD:List = List of the OD pairs in the network.
+    """
+    V = [] # vertices
+    E = [] # edges
+    F = {} # cost functions
+    OD = {} # OD pairs
+
+    lineid = 0
+    for line in open(graph_file, 'r'):
+        lineid += 1
+        # ignore \n
+        line = line.rstrip()
+        # ignore comments
+        hash_pos = line.find('#')
+        if hash_pos > -1:
+            line = line[:hash_pos]
+
+        # split the line
+        taglist = line.split()
+        if len(taglist) == 0:
+            continue
+
+        if taglist[0] == 'function':
+            # process the params
+            params = taglist[2][1:-1].split(',')
+            if len(params) > 1:
+                raise Exception('Cost functions with more than one parameter are not yet'\
+                                'acceptable! (parameters defined: %s)' % str(params)[1:-1])
+
+            # process the function
+            function = Parser().parse(taglist[3])
+
+            # process the constants
+            constants = function.variables()
+            if params[0] in constants: # the parameter must be ignored
+                constants.remove(params[0])
+
+            # store the function
+            F[taglist[1]] = [params[0], constants, function]
+
+        elif taglist[0] == 'node':
+            V.append(Node(taglist[1]))
+
+        elif taglist[0] == 'dedge' or taglist[0] == 'edge': # dedge is a directed edge
+            # process the cost
+            function = F[taglist[4]] # get the corresponding function
+            # associate constants and values specified in the line (in order of occurrence)
+            param_values = dict(zip(function[1], map(float, taglist[5:])))
+
+            param_values[function[0]] = flow # set the function's parameter with the flow value
+            cost = function[2].evaluate(param_values) # calculate the cost
+
+            # create the edge(s)
+            E.append(Edge(taglist[1], taglist[2], taglist[3], cost))
+            if taglist[0] == 'edge':
+                E.append(Edge('%s-%s'%(taglist[3], taglist[2]), taglist[3], taglist[2], cost))
+
+        elif taglist[0] == 'od':
+            if taglist[2] != taglist[3]:
+                OD[taglist[1]] = float(taglist[4])
+
+        else:
+            raise Exception('Network file does not comply with the specification!'\
+                            '(line %d: "%s")' % (lineid, line))
+
+    return V, E, OD
 
 # read a text file and generate the graph according to declarations
 def generateGraph(graph_file):
-    N = []
-    N_names = []
-    E = []
+    V = [] # vertices
+    E = [] # edges
     fname = open(graph_file, "r")
     line = fname.readline()
     line = line[:-1]
@@ -226,88 +331,68 @@ def pathToStr(path, N, E):
     
     return strout
 
-def process_OD_matrix(od_file):
-    
-    od_file = open(od_file, "r")
-    
-    OD_matrix = {}
-    
-    for line in od_file:
-        [o, d, demand] = line.split("\t")
-        if o != d:
-            OD_matrix[od_list_to_str(o, d)] = float(demand)
-    
-    od_file.close()
-    
-    return OD_matrix
-
 def od_str_to_list(od):
     return od.split("|")
 
-def od_list_to_str(o,d):
-    return "%s|%s" % (o,d)
-
 # method of successive averages
 def run_MSA(its, N, E, OD_matrix):
-    
     # initial value for phi
     phi = 1.0
-    
+
     # a nested dictionary data structure to store, for each OD pair, 
     # its routes, and, for each route, its edges and flows 
     # an entry can be said a 4-uple: (OD, route string, route, flow) 
     od_routes_flow = {od : {} for od in OD_matrix}
-    
+
     # iterations
     for n in xrange(1, its+1):
-        
+
         # update phi
         phi = 1.0 / n
-        
+
         # clear auxiliary flow of all links
         for e in E:
             e.aux_flow = 0
-        
+
         # calculate auxiliary flow based on a all-or-nothing assignment
         min_routes = {}
         for od in OD_matrix:
             [o,d] = od_str_to_list(od)
-            
+
             # compute shortest route
             route = getPathAsEdges(dijkstra(N, E, o, d, []), E)
             route_str = pathToStr(route, N, E)
-            
+
             # store min route of this od pair
             min_routes[od] = [route_str, route]
-            
+
             # if the min route is not in the od routes' list, add it
             if route_str not in od_routes_flow[od]:
                 od_routes_flow[od][route_str] = [route, 0]
-        
+
         # calculate current flow of all links
         for od in OD_matrix:
-            for route in od_routes_flow[od]: 
-                
+            for route in od_routes_flow[od]:
                 # route flow on previous iteration
                 vna = od_routes_flow[od][route][1]
-                
+
                 # auxiliary route flow (0 if not the current best route)
                 fa = 0
                 if route == min_routes[od][0]:
                     fa = OD_matrix[od]
-                
+
                 # route flow of current iteration
                 vna = max((1 - phi) * vna + phi * fa, 0)
-                
+
                 # update flows and costs
                 od_routes_flow[od][route][1] = vna
                 for e in od_routes_flow[od][route][0]:
                     e.aux_flow += vna
-                
+
         for e in E:
             e.flow = e.aux_flow
             e.update_cost()
-        
+
         # print (if desired) the main values calculated during current iteration
         if False:
             print "---- it %i ---------------------"%n
@@ -322,8 +407,8 @@ def run_MSA(its, N, E, OD_matrix):
                     print "\tfa=%i"%fa
                     print "\tvna=%i"%od_routes_flow[od][route][1]
                     print ""
-        
-    # print the final assignment    
+
+    # print the final assignment
     evaluate_assignment(OD_matrix, od_routes_flow)
 
 def evaluate_assignment(OD_matrix, od_routes_flow):
@@ -338,7 +423,7 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
     for od in od_routes_flow:
         
         aux = []
-        min_cost = 99999999999999
+        min_cost = float('inf')
         
         # calculate some information of each route
         for route in od_routes_flow[od]:
@@ -383,14 +468,15 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
     print "AEC: %.10f"%(delta_top / delta_bottom)
 
 if __name__ == '__main__':
-    
+    '''
+    TODO:
+        use argv for parameters.
+    '''
+
     net = "Sioux_Falls"
-    
+
     # read graph from file
-    N, E = generateGraph('graphs/%s.net'%net)
-    
-    # read list of OD_matrix-pairs
-    OD_matrix = process_OD_matrix('graphs/%s.od'%net)
-    
+    N, E, OD_matrix = generateGraph('graphs/%s.net'%net)
+
     # run MSA
     run_MSA(1000, N, E, OD_matrix)
