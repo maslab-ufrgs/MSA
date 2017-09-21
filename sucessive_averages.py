@@ -11,6 +11,8 @@ Date: 20/09/2017
 #Python third-party modules
 import string
 import argparse
+import os
+from time import localtime
 from py_expression_eval import Parser
 
 class Node(object):
@@ -392,8 +394,16 @@ def run_MSA(its, N, E, OD_matrix):
     evaluate_assignment(OD_matrix, od_routes_flow)
 
 def evaluate_assignment(OD_matrix, od_routes_flow):
+    path = './results/'
+    fn = NETWORK_NAME + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' + str(localtime()[5]) + 's'
+
+    if os.path.isdir(path) is False:
+        os.makedirs(path)
+
+    fh = open(path+fn, 'w')
+    print('#' + NETWORK_NAME, file=fh)
     # header
-    print("od\troute\tflow\ttravel time\tdeviations")
+    print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
     sum_tt = 0.0
     sum_deviations = 0
     delta_top = 0.0
@@ -428,14 +438,14 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
             # update the top part of delta equation
             delta_top += e[2] * (e[3] - min_cost)
             # print
-            print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations))
+            print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
         # update the bottom part of delta equation
         delta_bottom += OD_matrix[od]# * min_cost
     # print overall results
-    print("Average travel time: %f min" % (sum_tt / sum([x for x in OD_matrix.values()])))
-    print("Deviations: %i" % (sum_deviations))
+    print("Average travel time: %f min" % (sum_tt / sum([x for x in OD_matrix.values()])), file=fh)
+    print("Deviations: %i" % (sum_deviations), file=fh)
     #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
-    print("AEC: %.10f" % (delta_top / delta_bottom))
+    print("AEC: %.10f" % (delta_top / delta_bottom), file=fh)
 
 if __name__ == '__main__':
     prs = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -451,5 +461,6 @@ if __name__ == '__main__':
 
     # read graph from file
     N, E, OD_matrix = generateGraph(args.file)
+    NETWORK_NAME = os.path.basename(args.file)
     # run MSA
     run_MSA(args.episodes, N, E, OD_matrix)
