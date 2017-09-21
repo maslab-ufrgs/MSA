@@ -1,2 +1,2 @@
-# method-of-successive-averages
+# Method of successive averages
 Python implementation of the method of successive averages (MSA) for traffic assignment.
