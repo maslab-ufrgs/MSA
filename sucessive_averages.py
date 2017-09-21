@@ -3,16 +3,14 @@
 Created on 09/01/2015
 
 @author: gabriel
-'''
 
-'''
-TODO:
-    Problem with updating the function argument because the params aren`t repacked.
+New version by: Arthur Zachow Coelho (azcoelho@inf.ufrgs.br)
+Date: 20/09/2017
 '''
 
 #Python third-party modules
 import string
-import sys
+import argparse
 from py_expression_eval import Parser
 
 class Node(object):
@@ -63,8 +61,8 @@ class Edge(object):
 
 def generateGraph(graph_file, flow=0.0):
     """
-    Modified version from the KSP repository version 1.44.
-    Original is available at: https://github.com/maslab-ufrgs/ksp
+    Adapted version from the KSP repository version 1.44.
+    Original is available at: https://github.com/maslab-ufrgs/ksp/releases/tag/V1.44
     Generates the graph from a text file following the specifications(available @
         http://wiki.inf.ufrgs.br/network_files_specification).
     In:
@@ -140,15 +138,19 @@ def generateGraph(graph_file, flow=0.0):
 
     return V, E, OD
 
-# reset graph's variables to default
 def resetGraph(N):
+    '''
+    Reset graph's variables to default.
+    '''
     for node in N:
         node.dist = 1000000.0
         node.prev = None
         node.flag = 0
 
-# returns the smallest node in N but not in S
 def pickSmallestNode(N):
+    '''
+    Returns the smallest node in N but not in S.
+    '''
     minNode = None
     for node in N:
         if node.flag == 0:
@@ -161,16 +163,20 @@ def pickSmallestNode(N):
             minNode = node
     return minNode
 
-# returns the edges list of node u
 def pickEdgesList(u, E):
+    '''
+    Returns the edges list of node u.
+    '''
     uv = []
     for edge in E:
         if edge.start == u.name:
             uv.append(edge)
     return uv
 
-# Dijkstra's shortest path algorithm
 def dijkstra(N, E, origin, destination, ignoredEdges):
+    '''
+    Dijkstra's shortest path algorithm.
+    '''
 
     #reset the graph (so as to discard information from previous runs)
     resetGraph(N)
@@ -182,18 +188,17 @@ def dijkstra(N, E, origin, destination, ignoredEdges):
             node.dist = 0
         if node.name == destination:
             dest = node
-    
+
     u = pickSmallestNode(N)
     while u != None:
         u.flag = 1
         uv = pickEdgesList(u, E)
         n = None
         for edge in uv:
-            
             # avoid ignored edges
             if edge in ignoredEdges:
                 continue
-            
+
             # take the node n
             for node in N:
                 if node.name == edge.end:
@@ -202,12 +207,12 @@ def dijkstra(N, E, origin, destination, ignoredEdges):
             if n.dist > u.dist + edge.cost:
                 n.dist = u.dist + edge.cost
                 n.prev = u
-        
+
         u = pickSmallestNode(N)
         # stop when destination is reached
         if u == dest:
             break
-    
+
     # generate the final path
     S = []
     u = dest
@@ -215,11 +220,13 @@ def dijkstra(N, E, origin, destination, ignoredEdges):
         S.insert(0,u)
         u = u.prev
     S.insert(0,u)
-    
+
     return S
 
-# print vertices and edges
 def printGraph(N, E):
+    '''
+    Print vertices and edges.
+    '''
     print('vertices:')
     for node in N:
         previous = node.prev
@@ -231,53 +238,48 @@ def printGraph(N, E):
     for edge in E:
         print(edge.start, edge.end, edge.cost)
 
-# get the directed edge from u to v
-def getEdge(E, u, v):
-    for edge in E:
-        if edge.start == u and edge.end == v:
-            return edge
-    return None
-
-# get the directed edge from u to v
-def getNode(N, n):
-    for node in N:
-        if node.name == n:
-            return node
-    return None
-
-# calculate path P's cost
 def calcPathLength(P, N, E):
+    '''
+    Calculate path P's cost.
+    '''
     if type(P[0]) is Edge:
         P = getPathAsNodes(P, N, E)
     length = 0
     prev = None
     for node in P:
         if prev != None:
-            length += getEdge(E, prev.name, node.name).cost
+            length += [edge for edge in E if edge.start == prev.name and edge.end == node.name][0].cost
         prev = node
-    
+
     return length
 
-# calculate path P's cost
 def getPathAsEdges(P, E):
+    '''
+    Get the edges in the path.
+    '''
     path = []
     prev = None
     for node in P:
         if prev != None:
-            path.append(getEdge(E, prev.name, node.name))
+            path.append([edge for edge in E if edge.start == prev.name and edge.end == node.name][0])
         prev = node
-    
+
     return path
 
 def getPathAsNodes(P, N, E):
+    '''
+    Get the nodes in a path.
+    '''
     path = []
-    path.append(getNode(N, P[0].start))
+    path.append(node for node in N if P[0].start == N.node)
     for edge in P:
-        path.append(getNode(N, edge.end))
+        path.append(node for node in N if edge.end == N.node)
     return path
 
-# print the path S
 def printPath(path, N, E):
+    '''
+    Print the path S.
+    '''
     #S = N
     #if type(path[0]) is Edge:
     #    S = E
@@ -290,21 +292,16 @@ def printPath(path, N, E):
     print("%g = %s" % (calcPathLength(path, N, E), strout))
 
 def pathToStr(path, N, E):
-    
     if type(path[0]) is Node:
-        path = getPathAsEdges(path, E) 
-    
+        path = getPathAsEdges(path, E)
+
     strout = ""
-    
     for e in path:
         if strout != '':
             strout += ' - '
         strout += e.name
-    
-    return strout
 
-def od_str_to_list(od):
-    return od.split("|")
+    return strout
 
 def run_MSA(its, N, E, OD_matrix):
     '''
@@ -339,7 +336,8 @@ def run_MSA(its, N, E, OD_matrix):
         # calculate auxiliary flow based on a all-or-nothing assignment
         min_routes = {}
         for od in OD_matrix:
-            [o,d] = od_str_to_list(od)
+            [o, d] = od.split("|")
+
 
             # compute shortest route
             route = getPathAsEdges(dijkstra(N, E, o, d, []), E)
@@ -440,11 +438,18 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
     print("AEC: %.10f" % (delta_top / delta_bottom))
 
 if __name__ == '__main__':
-    if sys.argv[1]:
-        # read graph from file
-        N, E, OD_matrix = generateGraph(sys.argv[1])
+    prs = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                  description="""
+                                  The method of successive averages.
+                                  V2.0
+                                  """)
 
-        # run MSA
-        run_MSA(1000, N, E, OD_matrix)
-    else:
-        raise Exception("You haven't given a network file to be read.")
+    prs.add_argument("-f", dest="file", required=True, help="The network file.\n")
+    prs.add_argument("-e", "--episodes", type=int, default=1000, help="Number of episodes.\n")
+
+    args = prs.parse_args()
+
+    # read graph from file
+    N, E, OD_matrix = generateGraph(args.file)
+    # run MSA
+    run_MSA(args.episodes, N, E, OD_matrix)
