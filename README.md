@@ -32,7 +32,7 @@ The results of each experiment are available in the folder "results" after you r
 ## Options
 
 ```
-optional arguments:
+arguments:
   -h, --help            show this help message and exit
   -f FILE               The network file. (default: None)
   -e EPISODES, --episodes EPISODES  Number of episodes. (default: 1000)
