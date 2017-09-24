@@ -48,8 +48,8 @@ class Edge(object):
         self.var = variable # The variable of the equation
 
         self.flow = 0
-        self.aux_flow = 0
         self.cost = 0
+        self.aux_flow = 0
 
         self.update_cost() # Update for the initial cost
 
@@ -334,6 +334,7 @@ def run_MSA(its, N, E, OD_matrix):
         # clear auxiliary flow of all links
         for e in E:
             e.aux_flow = 0
+            #e.flow = 0
 
         # calculate auxiliary flow based on a all-or-nothing assignment
         min_routes = {}
@@ -370,6 +371,7 @@ def run_MSA(its, N, E, OD_matrix):
                 od_routes_flow[od][route][1] = vna
                 for e in od_routes_flow[od][route][0]:
                     e.aux_flow += vna
+                    #e.flow += vna
 
         for e in E:
             e.flow = e.aux_flow
@@ -394,16 +396,28 @@ def run_MSA(its, N, E, OD_matrix):
     evaluate_assignment(OD_matrix, od_routes_flow)
 
 def evaluate_assignment(OD_matrix, od_routes_flow):
-    path = './results/'
-    fn = NETWORK_NAME + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' + str(localtime()[5]) + 's'
+    '''
+    This function evaluates the assignment.
+    In:
+        OD_matrix:Dictionary = Dictionary with the od pair as key and demand as value.
+        od_routes_flow: = . (?)
+    '''
 
+    #The defined results folder.
+    path = './results/'
+    #The filename is the network name + the time of the day it was run.
+    fn = NETWORK_NAME.split('.')[0] + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' \
+       + str(localtime()[5]) + 's'
+
+    #Verifies the existence of the folder.
     if os.path.isdir(path) is False:
         os.makedirs(path)
 
     fh = open(path+fn, 'w')
-    print('#' + NETWORK_NAME, file=fh)
-    # header
+    #Header
+    print('#net_name: ' + NETWORK_NAME + ' episodes: ' + str(EPISODES_NUM), file=fh)
     print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
+
     sum_tt = 0.0
     sum_deviations = 0
     delta_top = 0.0
@@ -412,40 +426,70 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
     for od in od_routes_flow:
         aux = []
         min_cost = float('inf')
-        # calculate some information of each route
+        #Calculate some information of each route
         for route in od_routes_flow[od]:
-            # calculate cost of the route
+            #Calculate cost of the route
             cost = 0.0
             for e in od_routes_flow[od][route][0]:
                 cost += e.cost
                 sum_tt += e.cost * od_routes_flow[od][route][1]
-            cost = round(cost * 100) / 100 #to handle imprecise double representation (IEEE 754, via stackoverflow.com/questions/15625556)
-
-            # store minimum route cost of current OD pair
+            #To handle imprecise double representation
+            cost = round(cost * 100) / 100
+            #Store minimum route cost of current OD pair
             if cost < min_cost:
                 min_cost = cost
 
-            # store the values in a temporary data structure to allow
-            # the calculations of the "deviations from best" measure
+            #Store the values in a temporary data structure to allow
+            #The calculations of the "deviations from best" measure
             aux.append([od, route, od_routes_flow[od][route][1], cost])
-        # read the temporary data structure and print the results
+        #Read the temporary data structure and print the results
         for e in aux:
-            # calculate the "deviations from best" measure
+            #Calculate the "deviations from best" measure
             deviations = 0
             if e[3] > min_cost:
                 deviations = e[2]
                 sum_deviations += deviations
-            # update the top part of delta equation
+            #Update the top part of delta equation
             delta_top += e[2] * (e[3] - min_cost)
-            # print
             print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
-        # update the bottom part of delta equation
+        #Update the bottom part of delta equation
         delta_bottom += OD_matrix[od]# * min_cost
-    # print overall results
+    #Overall results
     print("Average travel time: %f min" % (sum_tt / sum([x for x in OD_matrix.values()])), file=fh)
     print("Deviations: %i" % (sum_deviations), file=fh)
     #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
     print("AEC: %.10f" % (delta_top / delta_bottom), file=fh)
+
+    fh.close()
+
+def export_to_igraph(edge_list, with_cost=False):
+    '''
+    This function exports a network to an edge list file to be read by the igraph module.
+    In:
+        edge_list:List = List of Edge class objects.
+        with_cost:Boolean = If it is necessary to print into the file the cost of the edges.
+    '''
+    #Define folder to store the graphs generated
+    path = './network_graphs/'
+
+    #Creates the folder if it doesn`t exist
+    if os.path.isdir(path) is False:
+        os.makedirs(path)
+
+    fh = open(path+NETWORK_NAME, 'w')
+
+    #Iterates through the list of edges printing the start and end in the file.
+    #It uses the format of edge list for the file input in igraph.
+    for edge in edge_list:
+        print('{} {}'.format(edge.start, edge.end), end='', file=fh)
+        if with_cost: # If want to print the weight of the edges in the graph too.
+            print(' {}'.format(edge.cost), file=fh)
+        else:
+            print('', file=fh)
+
+    fh.close()
+
+
 
 if __name__ == '__main__':
     prs = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -461,6 +505,7 @@ if __name__ == '__main__':
 
     # read graph from file
     N, E, OD_matrix = generateGraph(args.file)
-    NETWORK_NAME = os.path.basename(args.file)
+    NETWORK_NAME = os.path.basename(args.file).split('.')[0]
+    EPISODES_NUM = args.episodes
     # run MSA
-    run_MSA(args.episodes, N, E, OD_matrix)
+    run_MSA(EPISODES_NUM, N, E, OD_matrix)
