@@ -305,7 +305,7 @@ def pathToStr(path, N, E):
 
     return strout
 
-def run_MSA(its, N, E, OD_matrix):
+def run_MSA(its, N, E, OD_matrix, net_file_basename):
     '''
     This function actually runs the method of successive averages and print the results to a file.
     In:
@@ -393,9 +393,9 @@ def run_MSA(its, N, E, OD_matrix):
                     print("")
 
     # print the final assignment
-    evaluate_assignment(OD_matrix, od_routes_flow)
+    evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its)
 
-def evaluate_assignment(OD_matrix, od_routes_flow):
+def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its):
     '''
     This function evaluates the assignment.
     In:
@@ -406,7 +406,7 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
     #The defined results folder.
     path = './results/'
     #The filename is the network name + the time of the day it was run.
-    fn = NETWORK_NAME.split('.')[0] + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' \
+    fn = net_file_basename + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' \
        + str(localtime()[5]) + 's'
 
     #Verifies the existence of the folder.
@@ -415,7 +415,7 @@ def evaluate_assignment(OD_matrix, od_routes_flow):
 
     fh = open(path+fn, 'w')
     #Header
-    print('#net_name: ' + NETWORK_NAME + ' episodes: ' + str(EPISODES_NUM), file=fh)
+    print('#net_name: ' + net_file_basename + ' episodes: ' + str(its), file=fh)
     print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
 
     sum_tt = 0.0
@@ -489,9 +489,23 @@ def export_to_igraph(edge_list, with_cost=False):
 
     fh.close()
 
+def run(net_file, episodes):
+    """
+    Precisely the running function of the program.
+    In:
+        net_file:String = String representing the path to the network file.
+        episodes:Integer = Number of episodes to be run.
+    """
+    #Read graph from network file
+    N, E, OD_matrix = generateGraph(net_file)
+    #Run MSA
+    run_MSA(episodes, N, E, OD_matrix, os.path.basename(net_file).split('.')[0])
 
-
-if __name__ == '__main__':
+def main():
+    """
+    Upper level function to call the other functions.
+    """
+    #Parser things for the parameters
     prs = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                   description="""
                                   The method of successive averages.
@@ -500,12 +514,11 @@ if __name__ == '__main__':
 
     prs.add_argument("-f", dest="file", required=True, help="The network file.\n")
     prs.add_argument("-e", "--episodes", type=int, default=1000, help="Number of episodes.\n")
-
     args = prs.parse_args()
 
-    # read graph from file
-    N, E, OD_matrix = generateGraph(args.file)
-    NETWORK_NAME = os.path.basename(args.file).split('.')[0]
-    EPISODES_NUM = args.episodes
-    # run MSA
-    run_MSA(EPISODES_NUM, N, E, OD_matrix)
+    #Calls the run to effectively do the experiment
+    run(args.file, args.episodes)
+
+
+if __name__ == '__main__':
+    main()
