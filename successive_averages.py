@@ -60,6 +60,9 @@ class Edge(object):
         self.params[self.var] = self.flow
         self.cost = self.function[2].evaluate(self.params)
 
+    def __repr__(self):
+        return str(str(self.start) + '-' + str(self.end))
+
 
 def generateGraph(graph_file, flow=0.0):
     """
@@ -462,44 +465,22 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its):
 
     fh.close()
 
-def export_to_igraph(edge_list, with_cost=False):
-    '''
-    This function exports a network to an edge list file to be read by the igraph module.
-    In:
-        edge_list:List = List of Edge class objects.
-        with_cost:Boolean = If it is necessary to print into the file the cost of the edges.
-    '''
-    #Define folder to store the graphs generated
-    path = './network_graphs/'
-
-    #Creates the folder if it doesn`t exist
-    if os.path.isdir(path) is False:
-        os.makedirs(path)
-
-    fh = open(path+NETWORK_NAME, 'w')
-
-    #Iterates through the list of edges printing the start and end in the file.
-    #It uses the format of edge list for the file input in igraph.
-    for edge in edge_list:
-        print('{} {}'.format(edge.start, edge.end), end='', file=fh)
-        if with_cost: # If want to print the weight of the edges in the graph too.
-            print(' {}'.format(edge.cost), file=fh)
-        else:
-            print('', file=fh)
-
-    fh.close()
-
 def run(net_file, episodes):
     """
     Precisely the running function of the program.
     In:
         net_file:String = String representing the path to the network file.
         episodes:Integer = Number of episodes to be run.
+    Out:
+        N:List = List of Node objects.
+        E:List = List of Edge objects.
     """
     #Read graph from network file
     N, E, OD_matrix = generateGraph(net_file)
     #Run MSA
     run_MSA(episodes, N, E, OD_matrix, os.path.basename(net_file).split('.')[0])
+
+    return N, E
 
 def main():
     """
