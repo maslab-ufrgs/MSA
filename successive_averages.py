@@ -480,7 +480,7 @@ def run(net_file, episodes):
     #Run MSA
     run_MSA(episodes, N, E, OD_matrix, os.path.basename(net_file).split('.')[0])
 
-    return N, E
+    return N, E, OD_matrix
 
 def main():
     """
