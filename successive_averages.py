@@ -316,6 +316,8 @@ def run_MSA(its, N, E, OD_matrix, net_file_basename):
         N:List = List of Nodes (from the Node class).
         E:List = List of Edges (from the Edge class).
         OD_matrix:Dictionary = Dictionary of the OD pairs and their demands.
+    Out:
+        UE:Float = Represents the average total time of the network.
     '''
     # initial value for phi
     phi = 1.0
@@ -396,7 +398,8 @@ def run_MSA(its, N, E, OD_matrix, net_file_basename):
                     print("")
 
     # print the final assignment
-    evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its)
+    UE = evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its)
+    return UE
 
 def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its):
     '''
@@ -476,13 +479,15 @@ def run(net_file, episodes):
     Out:
         N:List = List of Node objects.
         E:List = List of Edge objects.
+        OD_matrix:Dictionary = OD pairs and demands.
+        UE:Float = Represents the average total time of the network.
     """
     #Read graph from network file
     N, E, OD_matrix = generateGraph(net_file)
     #Run MSA
-    run_MSA(episodes, N, E, OD_matrix, os.path.basename(net_file).split('.')[0])
+    UE = run_MSA(episodes, N, E, OD_matrix, os.path.basename(net_file).split('.')[0])
 
-    return N, E, OD_matrix
+    return N, E, OD_matrix, UE
 
 def main():
     """
