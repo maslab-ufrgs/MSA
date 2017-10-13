@@ -308,7 +308,7 @@ def pathToStr(path, N, E):
 
     return strout
 
-def run_MSA(its, N, E, OD_matrix, net_file_basename):
+def run_MSA(its, N, E, OD_matrix, net_file_basename, output):
     '''
     This function actually runs the method of successive averages and print the results to a file.
     In:
@@ -398,31 +398,38 @@ def run_MSA(its, N, E, OD_matrix, net_file_basename):
                     print("")
 
     # print the final assignment
-    UE = evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its)
+    UE = evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, output=output)
+
     return UE
 
-def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its):
+def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, output=True):
     '''
     This function evaluates the assignment.
     In:
         OD_matrix:Dictionary = Dictionary with the od pair as key and demand as value.
         od_routes_flow: = . (?)
+        net_file_basename:String = Name of the network.
+        its:Integer = Number of episodes.
+        output:Boolean = If the results are to be printed somewhere.
+    Out:
+        UE:Float = Average travel time of the network.
     '''
 
-    #The defined results folder.
-    path = './results/'
-    #The filename is the network name + the time of the day it was run.
-    fn = net_file_basename + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' \
-       + str(localtime()[5]) + 's'
+    if output:
+        #The defined results folder.
+        path = './results/'
+        #The filename is the network name + the time of the day it was run.
+        fn = net_file_basename + '_' + str(localtime()[3]) + 'h' + str(localtime()[4]) + 'm' \
+           + str(localtime()[5]) + 's'
 
-    #Verifies the existence of the folder.
-    if os.path.isdir(path) is False:
-        os.makedirs(path)
+        #Verifies the existence of the folder.
+        if os.path.isdir(path) is False:
+            os.makedirs(path)
 
-    fh = open(path+fn, 'w')
-    #Header
-    print('#net_name: ' + net_file_basename + ' episodes: ' + str(its), file=fh)
-    print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
+        fh = open(path+fn, 'w')
+        #Header
+        print('#net_name: ' + net_file_basename + ' episodes: ' + str(its), file=fh)
+        print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
 
     sum_tt = 0.0
     sum_deviations = 0
@@ -457,37 +464,48 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its):
                 sum_deviations += deviations
             #Update the top part of delta equation
             delta_top += e[2] * (e[3] - min_cost)
-            print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
+            if output:
+                print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
         #Update the bottom part of delta equation
         delta_bottom += OD_matrix[od]# * min_cost
     #Overall results
     UE = (sum_tt / sum([x for x in OD_matrix.values()]))
-    print("Average travel time: {} min".format(UE), file=fh)
-    print("Deviations: {}".format(int(sum_deviations)), file=fh)
-    #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
-    print("AEC: {:.10f}".format(delta_top / delta_bottom), file=fh)
+    if output:
+        print("Average travel time: {} min".format(UE), file=fh)
+        print("Deviations: {}".format(int(sum_deviations)), file=fh)
+        #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
+        print("AEC: {:.10f}".format(delta_top / delta_bottom), file=fh)
 
-    fh.close()
+        fh.close()
+
     return UE
 
-def run(net_file, episodes):
+def run(episodes, net_file=None, node_list=None, edge_list=None, od_matrix=None, output=True):
     """
-    Precisely the running function of the program.
+    Precisely the function of running the program.
+    Either pass a network file xor (node_list and edge_list and od_matrix).
     In:
         net_file:String = String representing the path to the network file.
         episodes:Integer = Number of episodes to be run.
+        node_list:List = List of Node objects.
+        edge_list:List = List of Edge objects.
+        od_matrix:Dictionary = OD pairs and demands.
+        output:Boolean = If the results are to be printed.
     Out:
-        N:List = List of Node objects.
-        E:List = List of Edge objects.
-        OD_matrix:Dictionary = OD pairs and demands.
+        node_list:List = List of Node objects.
+        edge_list:List = List of Edge objects.
+        od_matrix:Dictionary = OD pairs and demands.
         UE:Float = Represents the average total time of the network.
     """
-    #Read graph from network file
-    N, E, OD_matrix = generateGraph(net_file)
-    #Run MSA
-    UE = run_MSA(episodes, N, E, OD_matrix, os.path.basename(net_file).split('.')[0])
+    if net_file:
+        #Read graph from network file
+        node_list, edge_list, od_matrix = generateGraph(net_file)
+    if node_list and edge_list and od_matrix:
+        #Run MSA
+        UE = run_MSA(episodes, node_list, edge_list, od_matrix,
+                     os.path.basename(net_file).split('.')[0], output)
 
-    return N, E, OD_matrix, UE
+    return node_list, edge_list, od_matrix, UE
 
 def main():
     """
@@ -505,7 +523,7 @@ def main():
     args = prs.parse_args()
 
     #Calls the run to effectively do the experiment
-    run(args.file, args.episodes)
+    run(args.episodes, net_file=args.file)
 
 
 if __name__ == '__main__':
