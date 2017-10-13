@@ -458,12 +458,14 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its):
         #Update the bottom part of delta equation
         delta_bottom += OD_matrix[od]# * min_cost
     #Overall results
-    print("Average travel time: %f min" % (sum_tt / sum([x for x in OD_matrix.values()])), file=fh)
-    print("Deviations: %i" % (sum_deviations), file=fh)
+    UE = (sum_tt / sum([x for x in OD_matrix.values()]))
+    print("Average travel time: {} min".format(UE), file=fh)
+    print("Deviations: {}".format(int(sum_deviations)), file=fh)
     #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
-    print("AEC: %.10f" % (delta_top / delta_bottom), file=fh)
+    print("AEC: {:.10f}".format(delta_top / delta_bottom), file=fh)
 
     fh.close()
+    return UE
 
 def run(net_file, episodes):
     """
