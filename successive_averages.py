@@ -480,7 +480,7 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, outpu
 
     return UE
 
-def run(episodes, net_file=None, node_list=None, edge_list=None, od_matrix=None, output=True):
+def run(episodes, net_file='', node_list=None, edge_list=None, od_matrix=None, output=True):
     """
     Precisely the function of running the program.
     Either pass a network file xor (node_list and edge_list and od_matrix).
