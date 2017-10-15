@@ -428,8 +428,10 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, outpu
 
         fh = open(path+fn, 'w')
         #Header
-        print('#net_name: ' + net_file_basename + ' episodes: ' + str(its), file=fh)
-        print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
+        #print('#net_name: ' + net_file_basename + ' episodes: ' + str(its), file=fh)
+        fh.write('#net_name: ' + net_file_basename + ' episodes: ' + str(its) + '\n')
+        #print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
+        fh.write("#od\troute\tflow\ttravel time\tdeviations\n")
 
     sum_tt = 0.0
     sum_deviations = 0
@@ -465,16 +467,20 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, outpu
             #Update the top part of delta equation
             delta_top += e[2] * (e[3] - min_cost)
             if output:
-                print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
+                #print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
+                fh.write("%s\t%s\t%f\t%f\t%i\n" % (e[0], e[1], e[2], e[3], deviations))
         #Update the bottom part of delta equation
         delta_bottom += OD_matrix[od]# * min_cost
     #Overall results
     UE = (sum_tt / sum([x for x in OD_matrix.values()]))
     if output:
-        print("Average travel time: {} min".format(UE), file=fh)
-        print("Deviations: {}".format(int(sum_deviations)), file=fh)
+        #print("Average travel time: {} min".format(UE), file=fh)
+        fh.write("Average travel time: {} min\n".format(UE))
+        #print("Deviations: {}".format(int(sum_deviations)), file=fh)
+        fh.write("Deviations: {}\n".format(int(sum_deviations)))
         #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
-        print("AEC: {:.10f}".format(delta_top / delta_bottom), file=fh)
+        #print("AEC: {:.10f}".format(delta_top / delta_bottom), file=fh)
+        fh.write("AEC: {:.10f}\n".format(delta_top / delta_bottom))
 
         fh.close()
 
