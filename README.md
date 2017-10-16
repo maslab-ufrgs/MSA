@@ -2,7 +2,7 @@
 Python implementation of the method of successive averages (MSA) for traffic assignment.
 
 ## Requirements
- * [Python 3](https://www.python.org/downloads/)
+ * [Python 3](https://www.python.org/downloads/) or [Python 2.7](https://www.python.org/downloads/)
  * [Python Mathematical Expression Evaluator](https://pypi.python.org/pypi/py_expression_eval)
  
  ## Networks
