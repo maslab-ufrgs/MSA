@@ -24,10 +24,10 @@ class Node(object):
         In:
             name:String = Name of the node.
         """
-        self.name = name	# name of the node
-        self.dist = 1000000	# distance to this node from start node
-        self.prev = None	# previous node to this node
-        self.flag = 0		# access flag
+        self.name = name        # name of the node
+        self.dist = 1000000     # distance to this node from start node
+        self.prev = None        # previous node to this node
+        self.flag = 0           # access flag
 
     def __repr__(self):
         return repr(self.name)
@@ -382,25 +382,10 @@ def run_MSA(its, N, E, OD_matrix, net_file_basename, output):
             e.flow = e.aux_flow
             e.update_cost()
 
-        # print (if desired) the main values calculated during current iteration
-        if False:
-            print("---- it %i ---------------------" % n)
-            print("phi %f" % phi)
-            for od in OD_matrix:
-                print("%s (best route: %s)" % (od, min_routes[od][0]))
-                for route in od_routes_flow[od]:
-                    print("\t%s" % route)
-                    fa = 0
-                    if route == min_routes[od][0]:
-                        fa = OD_matrix[od]
-                    print("\tfa=%i" % fa)
-                    print("\tvna=%i" % od_routes_flow[od][route][1])
-                    print("")
-
     # print the final assignment
     UE = evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, output=output)
 
-    return UE
+    return UE, od_routes_flow
 
 def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, output=True):
     '''
@@ -508,10 +493,10 @@ def run(episodes, net_file='', node_list=None, edge_list=None, od_matrix=None, o
         node_list, edge_list, od_matrix = generateGraph(net_file)
     if node_list and edge_list and od_matrix:
         #Run MSA
-        UE = run_MSA(episodes, node_list, edge_list, od_matrix,
+        UE, od_routes_flow = run_MSA(episodes, node_list, edge_list, od_matrix,
                      os.path.basename(net_file).split('.')[0], output)
 
-    return node_list, edge_list, od_matrix, UE
+    return node_list, edge_list, od_matrix, UE, od_routes_flow
 
 def main():
     """
