@@ -6,7 +6,7 @@ Python implementation of the method of successive averages (MSA) for traffic ass
  * [Python Mathematical Expression Evaluator](https://pypi.python.org/pypi/py_expression_eval)
  
  ## Networks
- Available at:  [Networks](https://github.com/maslab-ufrgs/network-files)
+ Available at:  [Networks](https://github.com/maslab-ufrgs/transportation_networks)
  
 ## Usage
 
