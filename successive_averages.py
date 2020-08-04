@@ -6,6 +6,9 @@ Created on 09/01/2015
 
 New version by: Arthur Zachow Coelho (azcoelho@inf.ufrgs.br)
 Date: 20/09/2017
+
+Updated version by: João Vitor B. Labres (jvblabres@inf.ufrgs.br)
+Date: 04/08/2020
 '''
 
 #Python third-party modules
@@ -383,18 +386,18 @@ def run_MSA(its, N, E, OD_matrix, net_file_basename, output):
             e.update_cost()
 
     # print the final assignment
-    UE = evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, output=output)
+    UE = evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, E, output=output)
 
     return UE, od_routes_flow
 
-def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, output=True):
+def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, edge_list, output=True):
     '''
     This function evaluates the assignment.
     In:
         OD_matrix:Dictionary = Dictionary with the od pair as key and demand as value.
         od_routes_flow: = . (?)
         net_file_basename:String = Name of the network.
-        its:Integer = Number of episodes.
+        its:Integer = Number of iterations.
         output:Boolean = If the results are to be printed somewhere.
     Out:
         UE:Float = Average travel time of the network.
@@ -413,8 +416,8 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, outpu
 
         fh = open(path+fn, 'w')
         #Header
-        #print('#net_name: ' + net_file_basename + ' episodes: ' + str(its), file=fh)
-        fh.write('#net_name: ' + net_file_basename + ' episodes: ' + str(its) + '\n')
+        #print('#net_name: ' + net_file_basename + ' iterations: ' + str(its), file=fh)
+        fh.write('#net_name: ' + net_file_basename + ' iterations: ' + str(its) + '\n')
         #print("#od\troute\tflow\ttravel time\tdeviations", file=fh)
         fh.write("#od\troute\tflow\ttravel time\tdeviations\n")
 
@@ -452,32 +455,32 @@ def evaluate_assignment(OD_matrix, od_routes_flow, net_file_basename, its, outpu
             #Update the top part of delta equation
             delta_top += e[2] * (e[3] - min_cost)
             if output:
-                #print("%s\t%s\t%f\t%f\t%i" % (e[0], e[1], e[2], e[3], deviations), file=fh)
-                fh.write("%s\t%s\t%f\t%f\t%i\n" % (e[0], e[1], e[2], e[3], deviations))
-        #Update the bottom part of delta equation
+                fh.write("{}\t{:^60}\t{:^6.2f}\t{:^5.2f}\t{:.2f}\n".format(e[0], e[1], e[2], e[3], float(deviations)))
+
+		#Update the bottom part of delta equation
         delta_bottom += OD_matrix[od]# * min_cost
     #Overall results
     UE = (sum_tt / sum([x for x in OD_matrix.values()]))
     if output:
-        #print("Average travel time: {} min".format(UE), file=fh)
         fh.write("Average travel time: {} min\n".format(UE))
-        #print("Deviations: {}".format(int(sum_deviations)), file=fh)
         fh.write("Deviations: {}\n".format(int(sum_deviations)))
-        #print "%s: %.10f"%(u'\u03B4', (delta_top / delta_bottom))
-        #print("AEC: {:.10f}".format(delta_top / delta_bottom), file=fh)
         fh.write("AEC: {:.10f}\n".format(delta_top / delta_bottom))
 
-        fh.close()
+    fh.write("Name\t" + "Time\t" + "Flow\n")
+    for edge in edge_list:
+        fh.write("{:^5}\t{:.4f}\t{:.1f}\n".format(edge.name, edge.cost, edge.flow))
+
+    fh.close()
 
     return UE
 
-def run(episodes, net_file='', node_list=None, edge_list=None, od_matrix=None, output=True):
+def run(iterations, net_file='', node_list=None, edge_list=None, od_matrix=None, output=True):
     """
     Precisely the function of running the program.
     Either pass a network file xor (node_list and edge_list and od_matrix).
     In:
         net_file:String = String representing the path to the network file.
-        episodes:Integer = Number of episodes to be run.
+        iterations:Integer = Number of iterations to be run.
         node_list:List = List of Node objects.
         edge_list:List = List of Edge objects.
         od_matrix:Dictionary = OD pairs and demands.
@@ -493,8 +496,12 @@ def run(episodes, net_file='', node_list=None, edge_list=None, od_matrix=None, o
         node_list, edge_list, od_matrix = generateGraph(net_file)
     if node_list and edge_list and od_matrix:
         #Run MSA
-        UE, od_routes_flow = run_MSA(episodes, node_list, edge_list, od_matrix,
+        UE, od_routes_flow = run_MSA(iterations, node_list, edge_list, od_matrix,
                      os.path.basename(net_file).split('.')[0], output)
+
+    print("Name\t" + "Time\t", "Flow")
+    for edge in edge_list:
+        print("{}\t{:.4f}\t{:.1f}".format(edge.name, edge.cost, edge.flow))
 
     return node_list, edge_list, od_matrix, UE, od_routes_flow
 
@@ -506,15 +513,15 @@ def main():
     prs = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                   description="""
                                   The method of successive averages.
-                                  V2.0
+                                  V2.1
                                   """)
 
     prs.add_argument("-f", dest="file", required=True, help="The network file.\n")
-    prs.add_argument("-e", "--episodes", type=int, default=1000, help="Number of episodes.\n")
+    prs.add_argument("-i", "--iterations", type=int, default=1000, help="Number of iterations.\n")
     args = prs.parse_args()
 
     #Calls the run to effectively do the experiment
-    run(args.episodes, net_file=args.file)
+    run(args.iterations, net_file=args.file)
 
 
 if __name__ == '__main__':
